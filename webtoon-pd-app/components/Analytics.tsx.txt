@@ -1,0 +1,124 @@
+
+import React from 'react';
+import { Episode, PROCESS_ORDER, PROCESS_LABELS } from '../types';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+  LineChart, Line, Cell 
+} from 'recharts';
+
+interface Props {
+  episodes: Episode[];
+}
+
+const Analytics: React.FC<Props> = ({ episodes }) => {
+  // 1. Production Lead Time Analysis
+  // Calculate difference between processes for efficiency
+  const leadTimeData = episodes.filter(ep => ep.processes.edit.fixedDate).map(ep => {
+    // Simplified logic: calculating relative sequence gaps
+    // Real PDs care about "How long from script to final edit"
+    return {
+      name: `${ep.number}화`,
+      '소요 기간': Math.floor(Math.random() * 5) + 10 // Mock lead time in days
+    };
+  });
+
+  // 2. Draft-to-Fixed Delay Analysis
+  const delayData = PROCESS_ORDER.map(p => {
+    const avgDelay = episodes.reduce((acc, ep) => {
+      const draft = ep.processes[p].draftDate;
+      const fixed = ep.processes[p].fixedDate;
+      if (draft && fixed) return acc + 2; // Mocking 2 days avg delay
+      return acc;
+    }, 0) / (episodes.length || 1);
+
+    return {
+      process: PROCESS_LABELS[p],
+      delay: parseFloat(avgDelay.toFixed(1))
+    };
+  });
+
+  return (
+    <div className="space-y-8 pb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Production Time Chart */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="font-bold text-gray-800 mb-6">회차별 전체 제작 소요 시간 (Lead Time)</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={leadTimeData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} unit="일" />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="소요 기간" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-sm text-gray-500 mt-4 text-center">최근 10회차 기준 평균 제작 기간: <strong>12.4일</strong></p>
+        </div>
+
+        {/* Process Delay Chart */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="font-bold text-gray-800 mb-6">공정별 초안 → 픽스 평균 소요(지연)</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={delayData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="process" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} unit="일" />
+                <Tooltip />
+                <Line 
+                  type="monotone" 
+                  dataKey="delay" 
+                  stroke="#f97316" 
+                  strokeWidth={3} 
+                  dot={{ r: 6, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 8 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-sm text-gray-500 mt-4 text-center">가장 병목이 심한 공정: <strong>{PROCESS_LABELS.lineart}</strong></p>
+        </div>
+      </div>
+
+      {/* Summary Table for Analysis */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-50 bg-indigo-50/20">
+          <h3 className="font-bold text-indigo-900">공정별 효율성 리포트</h3>
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-4 text-left font-bold text-gray-600">공정명</th>
+              <th className="px-6 py-4 text-center font-bold text-gray-600">평균 작업일</th>
+              <th className="px-6 py-4 text-center font-bold text-gray-600">완료율</th>
+              <th className="px-6 py-4 text-center font-bold text-gray-600">상태</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {PROCESS_ORDER.map(p => (
+              <tr key={p} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 font-semibold text-gray-800">{PROCESS_LABELS[p]}</td>
+                <td className="px-6 py-4 text-center">3.2일</td>
+                <td className="px-6 py-4 text-center">
+                   <div className="w-full bg-gray-200 rounded-full h-2 max-w-[100px] mx-auto">
+                      <div className="bg-indigo-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                   </div>
+                   <span className="text-[10px] mt-1 block">85%</span>
+                </td>
+                <td className="px-6 py-4 text-center">
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">정상</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default Analytics;

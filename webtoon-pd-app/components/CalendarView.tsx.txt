@@ -1,0 +1,218 @@
+
+import React, { useState, useMemo } from 'react';
+import { Episode, PROCESS_ORDER, PROCESS_LABELS, ProcessType } from '../types';
+import { ChevronLeft, ChevronRight, Info, CheckCircle2, Clock, Calendar as CalendarIcon } from 'lucide-react';
+
+interface Props {
+  episodes: Episode[];
+}
+
+// 공정별 테마 컬러 정의
+const PROCESS_THEMES: Record<ProcessType, { base: string; text: string; bg: string; border: string }> = {
+  script: { base: 'indigo', text: 'text-indigo-700', bg: 'bg-indigo-500', border: 'border-indigo-200' },
+  storyboard: { base: 'purple', text: 'text-purple-700', bg: 'bg-purple-500', border: 'border-purple-200' },
+  background: { base: 'emerald', text: 'text-emerald-700', bg: 'bg-emerald-500', border: 'border-emerald-200' },
+  lineart: { base: 'rose', text: 'text-rose-700', bg: 'bg-rose-500', border: 'border-rose-200' },
+  color: { base: 'amber', text: 'text-amber-700', bg: 'bg-amber-500', border: 'border-amber-200' },
+  edit: { base: 'slate', text: 'text-slate-700', bg: 'bg-slate-500', border: 'border-slate-200' },
+};
+
+const CalendarView: React.FC<Props> = ({ episodes }) => {
+  // 오늘 날짜를 기준으로 초기값 설정
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // 캘린더 날짜 계산
+  const calendarDays = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const days = [];
+    
+    // 이전 달의 빈 공간
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(null);
+    }
+    
+    // 현재 달의 날짜들
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    return days;
+  }, [currentDate]);
+
+  // "YY.MM.DD" 포맷을 Date 객체로 변환하여 비교하기 위한 헬퍼
+  const isSameDate = (dateStr: string | undefined, calendarDate: Date) => {
+    if (!dateStr) return false;
+    const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{2})/);
+    if (!match) return false;
+    
+    const [_, yy, mm, dd] = match;
+    const year = 2000 + parseInt(yy);
+    const month = parseInt(mm) - 1;
+    const day = parseInt(dd);
+    
+    return (
+      calendarDate.getFullYear() === year &&
+      calendarDate.getMonth() === month &&
+      calendarDate.getDate() === day
+    );
+  };
+
+  // 해당 날짜의 이벤트들 찾기
+  const getEventsForDate = (date: Date) => {
+    const events: { ep: number; process: ProcessType; type: 'draft' | 'fixed' }[] = [];
+    
+    episodes.forEach(ep => {
+      PROCESS_ORDER.forEach(p => {
+        if (isSameDate(ep.processes[p].draftDate, date)) {
+          events.push({ ep: ep.number, process: p, type: 'draft' });
+        }
+        if (isSameDate(ep.processes[p].fixedDate, date)) {
+          events.push({ ep: ep.number, process: p, type: 'fixed' });
+        }
+      });
+    });
+    
+    return events;
+  };
+
+  const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Calendar Header */}
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-6">
+            <h3 className="text-xl font-bold text-gray-800 min-w-[140px]">
+              {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
+            </h3>
+            <div className="flex gap-2 items-center">
+              <div className="flex bg-gray-100 p-1 rounded-xl">
+                <button onClick={prevMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-500 transition-all">
+                  <ChevronLeft size={20} />
+                </button>
+                <button onClick={nextMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-500 transition-all">
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+              <button 
+                onClick={goToToday}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-sm font-bold transition-all active:scale-95"
+              >
+                <CalendarIcon size={16} />
+                오늘
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <div className="flex gap-4 text-xs font-bold">
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100 shadow-sm">
+                 <div className="w-2.5 h-2.5 rounded-full border border-indigo-500 border-dashed bg-white"></div>
+                 <span className="text-gray-600">초안(Draft)</span>
+               </div>
+               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100 shadow-sm">
+                 <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                 <span className="text-gray-600">픽스(Fixed)</span>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar Grid Header */}
+        <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/50">
+          {weekDays.map(day => (
+            <div key={day} className={`py-3 text-center text-xs font-black uppercase tracking-widest ${day === '일' ? 'text-rose-500' : day === '토' ? 'text-indigo-500' : 'text-gray-400'}`}>
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Days Grid */}
+        <div className="grid grid-cols-7 auto-rows-[minmax(140px,auto)] bg-gray-100/20">
+          {calendarDays.map((date, idx) => {
+            if (!date) return <div key={`empty-${idx}`} className="bg-gray-50/30 border-r border-b border-gray-100"></div>;
+            
+            const events = getEventsForDate(date);
+            const isToday = new Date().toDateString() === date.toDateString();
+            const isSunday = date.getDay() === 0;
+
+            return (
+              <div key={date.toString()} className={`p-2 border-r border-b border-gray-100 min-h-[140px] transition-all hover:z-10 hover:shadow-inner ${isToday ? 'bg-indigo-50/20' : 'bg-white'}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <span className={`text-[11px] font-black px-2 py-0.5 rounded ${
+                    isToday ? 'bg-indigo-600 text-white shadow-md' : isSunday ? 'text-rose-500' : 'text-gray-400'
+                  }`}>
+                    {date.getDate()}
+                  </span>
+                  {isToday && <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-tighter">Today</span>}
+                </div>
+                
+                <div className="space-y-1.5">
+                  {events.map((ev, i) => {
+                    const theme = PROCESS_THEMES[ev.process];
+                    return (
+                      <div 
+                        key={i} 
+                        className={`flex flex-col gap-0.5 px-2 py-1.5 rounded-md border text-[10px] shadow-sm transition-all hover:scale-105 hover:shadow-md cursor-default group/event ${
+                          ev.type === 'fixed' 
+                            ? `${theme.bg} text-white border-transparent` 
+                            : `bg-white ${theme.text} ${theme.border} border-dashed`
+                        }`}
+                        title={`${ev.ep}화 ${PROCESS_LABELS[ev.process]} (${ev.type === 'fixed' ? '픽스' : '초안'})`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-black opacity-90">Ep.{ev.ep}</span>
+                          {ev.type === 'fixed' ? <CheckCircle2 size={10} className="opacity-80" /> : <Clock size={10} className="opacity-80 animate-pulse" />}
+                        </div>
+                        <div className="font-bold truncate">
+                          {PROCESS_LABELS[ev.process]} {ev.type === 'fixed' ? '픽스' : '초안'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Footer Info */}
+        <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-gray-500">
+            <Info size={14} className="text-indigo-400" />
+            <span>각 공정별 색상으로 마감 기한을 구분합니다. 배경색이 있는 것은 '픽스', 테두리만 있는 것은 '초안' 일정입니다.</span>
+          </div>
+          
+          <div className="flex gap-2">
+            {PROCESS_ORDER.map(p => (
+              <div key={p} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-100 rounded shadow-xs">
+                <div className={`w-2 h-2 rounded-full ${PROCESS_THEMES[p].bg}`}></div>
+                <span className="text-[10px] font-bold text-gray-500">{PROCESS_LABELS[p]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CalendarView;
